@@ -14,8 +14,9 @@ router.get('/', async (_req: Request, res: Response) => {
 
 // GET /entries/:id — get one
 router.get('/:id', async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const entry = await prisma.entry.findUnique({
-    where: { id: req.params.id },
+    where: { id },
   });
   if (!entry) {
     return res.status(404).json({ error: 'Entry not found' });
@@ -40,6 +41,7 @@ router.post('/', async (req: Request, res: Response) => {
 
 // PUT /entries/:id — update (snapshots previous version)
 router.put('/:id', async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const parsed = updateEntrySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({
@@ -49,7 +51,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   }
 
   const existing = await prisma.entry.findUnique({
-    where: { id: req.params.id },
+    where: { id },
   });
   if (!existing) {
     return res.status(404).json({ error: 'Entry not found' });
@@ -65,7 +67,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   });
 
   const updated = await prisma.entry.update({
-    where: { id: req.params.id },
+    where: { id },
     data: {
       ...parsed.data,
       version: existing.version + 1,
@@ -77,20 +79,22 @@ router.put('/:id', async (req: Request, res: Response) => {
 
 // DELETE /entries/:id
 router.delete('/:id', async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const existing = await prisma.entry.findUnique({
-    where: { id: req.params.id },
+    where: { id },
   });
   if (!existing) {
     return res.status(404).json({ error: 'Entry not found' });
   }
-  await prisma.entry.delete({ where: { id: req.params.id } });
+  await prisma.entry.delete({ where: { id } });
   res.status(204).send();
 });
 
 // GET /entries/:id/versions — version history
 router.get('/:id/versions', async (req: Request, res: Response) => {
+  const id = req.params.id as string;
   const versions = await prisma.entryVersion.findMany({
-    where: { entryId: req.params.id },
+    where: { entryId: id },
     orderBy: { version: 'desc' },
   });
   res.json({ data: versions });
