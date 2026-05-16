@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mini Content API</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface-2: #1f232c;
+    --border: #2a2f3a;
+    --text: #e6e8ec;
+    --text-dim: #8b92a3;
+    --accent: #7c9eff;
+    --accent-dim: #4a6bcc;
+    --danger: #ff6b6b;
+    --success: #5ec27e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
+  header { margin-bottom: 40px; }
+  h1 { margin: 0 0 8px; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
+  .subtitle { color: var(--text-dim); font-size: 15px; margin: 0; }
+  .meta { margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; font-size: 12px; color: var(--text-dim);
+  }
+  .badge a { color: var(--accent); text-decoration: none; }
+  .badge a:hover { text-decoration: underline; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px;
+  }
+  h2 { margin: 0 0 16px; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+  input, textarea {
+    width: 100%; padding: 10px 12px; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); font-family: inherit; font-size: 14px;
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
+  .form-row { margin-bottom: 14px; }
+  button {
+    padding: 9px 16px; background: var(--accent); color: #0f1115;
+    border: none; border-radius: 6px; font-weight: 600; font-size: 14px;
+    cursor: pointer; transition: background 0.15s; font-family: inherit;
+  }
+  button:hover { background: #94b1ff; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.secondary {
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  button.secondary:hover { background: var(--border); }
+  button.small {
+    padding: 4px 10px; font-size: 12px; font-weight: 500;
+    background: var(--surface); color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  button.small:hover { color: var(--text); border-color: var(--accent); }
+  button.danger {
+    background: transparent; color: var(--danger);
+    border: 1px solid var(--border); padding: 4px 10px; font-size: 12px;
+  }
+  button.danger:hover { background: rgba(255, 107, 107, 0.1); }
+  .entries { display: flex; flex-direction: column; gap: 10px; }
+  .entry {
+    padding: 14px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; transition: border-color 0.15s;
+  }
+  .entry.editing { border-color: var(--accent); }
+  .entry-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 12px; margin-bottom: 6px;
+  }
+  .entry-title { font-weight: 600; font-size: 15px; }
+  .entry-body { color: var(--text-dim); font-size: 13px; margin-bottom: 8px; word-wrap: break-word; white-space: pre-wrap; }
+  .entry-meta {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .entry-actions { display: flex; gap: 6px; }
+  .version-tag {
+    padding: 2px 7px; background: rgba(124, 158, 255, 0.15);
+    color: var(--accent); border-radius: 4px; font-weight: 600;
+  }
+  .link {
+    color: var(--accent); cursor: pointer; text-decoration: none;
+    background: none; border: none; padding: 0; font-size: 11px;
+  }
+  .link:hover { text-decoration: underline; }
+  .edit-form { display: flex; flex-direction: column; gap: 10px; }
+  .edit-actions { display: flex; gap: 8px; }
+  .empty { color: var(--text-dim); font-size: 13px; padding: 20px 0; text-align: center; }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; padding: 12px 18px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; font-size: 13px;
+    transform: translateY(100px); opacity: 0;
+    transition: transform 0.2s, opacity 0.2s;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--success); }
+  .toast.error { border-color: var(--danger); }
+  code {
+    font-family: "SF Mono", Monaco, Consolas, monospace; font-size: 12px;
+    background: var(--surface-2); padding: 1px 5px; border-radius: 3px;
+  }
+  .endpoints { font-size: 12px; color: var(--text-dim); line-height: 1.8; }
+  .endpoints code { color: var(--text); }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; padding: 24px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px; max-width: 520px; width: 100%;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .modal h3 { margin: 0 0 16px; font-size: 16px; }
+  .version-list { display: flex; flex-direction: column; gap: 10px; }
+  .version-item {
+    padding: 12px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 6px;
+  }
+  .version-item-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+  }
+  .version-item-title { font-weight: 600; font-size: 14px; }
+  .version-item-body { color: var(--text-dim); font-size: 13px; white-space: pre-wrap; }
+  .version-item-time { font-size: 11px; color: var(--text-dim); margin-top: 6px; }
+  .modal-close { margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Mini Content API</h1>
+    <p class="subtitle">A versioned content-management API. Every update snapshots the prior state into an append-only history.</p>
+    <div class="meta">
+      <span class="badge">Node.js + TypeScript</span>
+      <span class="badge">Express</span>
+      <span class="badge">Prisma + SQLite</span>
+      <span class="badge"><a href="https://github.com/vytuongle/mini-content-api" target="_blank">View source ↗</a></span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Create entry</h2>
+      <div class="form-row">
+        <label for="title">Title</label>
+        <input id="title" type="text" placeholder="e.g. Release notes v1.2" />
+      </div>
+      <div class="form-row">
+        <label for="body">Body</label>
+        <textarea id="body" placeholder="Content goes here..."></textarea>
+      </div>
+      <button id="create-btn">Create</button>
+    </div>
+
+    <div class="card">
+      <h2>API surface</h2>
+      <div class="endpoints">
+        <div><code>GET&nbsp;&nbsp;&nbsp;/api/v1/entries</code></div>
+        <div><code>POST&nbsp;&nbsp;/api/v1/entries</code></div>
+        <div><code>GET&nbsp;&nbsp;&nbsp;/api/v1/entries/:id</code></div>
+        <div><code>PUT&nbsp;&nbsp;&nbsp;/api/v1/entries/:id</code></div>
+        <div><code>DEL&nbsp;&nbsp;&nbsp;/api/v1/entries/:id</code></div>
+        <div><code>GET&nbsp;&nbsp;&nbsp;/api/v1/entries/:id/versions</code></div>
+        <div><code>GET&nbsp;&nbsp;&nbsp;/health</code></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 24px;">
+    <h2>Entries</h2>
+    <div id="entries" class="entries"></div>
+  </div>
+</div>
+
+<div id="modal" class="modal-backdrop" onclick="if(event.target===this) closeModal()">
+  <div class="modal">
+    <h3 id="modal-title">Version history</h3>
+    <div id="modal-content"></div>
+    <button class="secondary modal-close" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const API = '/api/v1/entries';
+const $ = (id) => document.getElementById(id);
+let editingId = null;
+
+const toast = (msg, type = 'success') => {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  setTimeout(() => el.className = 'toast', 2400);
+};
+
+async function load() {
+  try {
+    const res = await fetch(API);
+    const { data } = await res.json();
+    const container = $('entries');
+    if (!data.length) {
+      container.innerHTML = '<div class="empty">No entries yet. Create one above.</div>';
+      return;
+    }
+    container.innerHTML = data.map(e => renderEntry(e)).join('');
+  } catch (err) {
+    toast('Failed to load entries', 'error');
+  }
+}
+
+function renderEntry(e) {
+  if (editingId === e.id) {
+    return `
+      <div class="entry editing">
+        <div class="edit-form">
+          <div>
+            <label>Title</label>
+            <input id="edit-title-${e.id}" type="text" value="${escapeAttr(e.title)}" />
+          </div>
+          <div>
+            <label>Body</label>
+            <textarea id="edit-body-${e.id}">${escapeHtml(e.body)}</textarea>
+          </div>
+          <div class="edit-actions">
+            <button onclick="saveEdit('${e.id}')">Save (creates v${e.version + 1})</button>
+            <button class="secondary" onclick="cancelEdit()">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="entry">
+      <div class="entry-header">
+        <div class="entry-title">${escapeHtml(e.title)}</div>
+        <div class="entry-actions">
+          <button class="small" onclick="startEdit('${e.id}')">Edit</button>
+          <button class="danger" onclick="del('${e.id}')">Delete</button>
+        </div>
+      </div>
+      <div class="entry-body">${escapeHtml(e.body)}</div>
+      <div class="entry-meta">
+        <span class="version-tag">v${e.version}</span>
+        <span>Updated ${new Date(e.updatedAt).toLocaleString()}</span>
+        ${e.version > 1 ? `<button class="link" onclick="viewHistory('${e.id}')">View history</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+async function create() {
+  const title = $('title').value.trim();
+  const body = $('body').value.trim();
+  if (!title || !body) return toast('Title and body required', 'error');
+
+  const btn = $('create-btn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body })
+    });
+    if (!res.ok) throw new Error('Create failed');
+    $('title').value = '';
+    $('body').value = '';
+    toast('Entry created');
+    load();
+  } catch (err) {
+    toast('Failed to create entry', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function startEdit(id) {
+  editingId = id;
+  load();
+}
+
+function cancelEdit() {
+  editingId = null;
+  load();
+}
+
+async function saveEdit(id) {
+  const title = $(`edit-title-${id}`).value.trim();
+  const body = $(`edit-body-${id}`).value.trim();
+  if (!title || !body) return toast('Title and body required', 'error');
+
+  try {
+    const res = await fetch(`${API}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body })
+    });
+    if (!res.ok) throw new Error('Update failed');
+    editingId = null;
+    toast('Entry updated — prior version saved to history');
+    load();
+  } catch (err) {
+    toast('Failed to update entry', 'error');
+  }
+}
+
+async function del(id) {
+  if (!confirm('Delete this entry and its version history?')) return;
+  try {
+    await fetch(`${API}/${id}`, { method: 'DELETE' });
+    toast('Deleted');
+    load();
+  } catch (err) {
+    toast('Failed to delete', 'error');
+  }
+}
+
+async function viewHistory(id) {
+  try {
+    const res = await fetch(`${API}/${id}/versions`);
+    const { data } = await res.json();
+    const content = $('modal-content');
+    if (!data.length) {
+      content.innerHTML = '<div class="empty">No prior versions.</div>';
+    } else {
+      content.innerHTML = `<div class="version-list">${data.map(v => `
+        <div class="version-item">
+          <div class="version-item-header">
+            <span class="version-tag">v${v.version}</span>
+            <span class="version-item-title">${escapeHtml(v.title)}</span>
+          </div>
+          <div class="version-item-body">${escapeHtml(v.body)}</div>
+          <div class="version-item-time">Snapshotted ${new Date(v.createdAt).toLocaleString()}</div>
+        </div>
+      `).join('')}</div>`;
+    }
+    $('modal').classList.add('show');
+  } catch (err) {
+    toast('Failed to load history', 'error');
+  }
+}
+
+function closeModal() {
+  $('modal').classList.remove('show');
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/"/g, '&quot;');
+}
+
+$('create-btn').addEventListener('click', create);
+load();
+</script>
+</body>
+</html>

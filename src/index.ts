@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import entriesRouter from './routes/entries';
 
 const app = express();
@@ -6,13 +7,17 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+// Serve the UI from /public
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.use('/api/v1/entries', entriesRouter);
 
-app.use((_req, res) => {
+// JSON 404 for unmatched API routes only
+app.use('/api', (_req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
